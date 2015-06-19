@@ -1,0 +1,15 @@
+obj
+Temp
+*.tmproj
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.userprefs
+.DS_Store
+
+.DS_Store
+
+Library
