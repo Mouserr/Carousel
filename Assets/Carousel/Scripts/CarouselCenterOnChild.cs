@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
+namespace Carousel
 {
     public class CarouselCenterOnChild : MonoBehaviour
     {
@@ -9,9 +9,9 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
         public delegate void OnCenterCallback(GameObject gameObject);
 
         [SerializeField]
-        private CyclicCarousel3D carousel;
+        private AbstractCarousel carousel;
         [SerializeField]
-        private CarouselMotor carouselMotor;
+        private InertialMotor inertialMotor;
         /// <summary>
         /// The strength of the spring.
         /// </summary>
@@ -39,10 +39,16 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
 
         public GameObject CenteredObject { get { return centeredObject; } }
 
+        protected virtual void Awake()
+        {
+            inertialMotor = inertialMotor ?? GetComponent<InertialMotor>();
+            carousel = carousel ?? GetComponent<AbstractCarousel>();
+        }
+
         public void Recenter()
         {
             // Offset this value by the momentum
-            Vector3 momentum = carouselMotor.currentMomentum * carouselMotor.momentumAmount;
+            Vector3 momentum = inertialMotor.CurrentMomentum * inertialMotor.MomentumAmount;
             Vector3 moveDelta = NGUIMath.SpringDampen(ref momentum, 9f, 2f);
             Vector3 centerOffset = - moveDelta * 0.001f; // Magic number based on what "feels right"
             targetIndex = carousel.GetClosestToCenterIndex(Vector3.zero);
@@ -69,16 +75,16 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
             float delta = Time.fixedDeltaTime;
 
             bool trigger = false;
-            float before = carousel.GetDistanceToIndex(targetIndex);
-            float after = NGUIMath.SpringLerp(0, before, springStr, delta);
-           
-            if (Math.Abs(after) < 0.001)
+            Vector3 before = carousel.GetDistanceForCenteringIndex(targetIndex);
+            Vector3 after = NGUIMath.SpringLerp(Vector3.zero, before, springStr, delta);
+
+            if (after.sqrMagnitude < 0.00001)
             {
-                after = 0;
+                after = Vector3.zero;
                 enabled = false;
                 trigger = true;
             }
-            carousel.Move(after);
+            carousel.MoveRelative(after);
 
             if (trigger && onFinished != null)
             {

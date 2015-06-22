@@ -1,10 +1,10 @@
 ﻿using UnityEngine;
 
-namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
+namespace Carousel
 {
     public class DragCarousel : MonoBehaviour
     {
-        public CarouselMotor Carousel;
+        public InertialMotor Carousel;
 
         /// <summary>
         /// Create a plane on which we will be performing the dragging.

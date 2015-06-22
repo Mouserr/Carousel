@@ -2,61 +2,42 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
+namespace Carousel
 {
-    public class CyclicCarousel3D : MonoBehaviour
+    public class CyclicCarousel3D : AbstractCarousel
     {
         [SerializeField]
-        private float frontRadius = 330;
+        private float radius = 330;
+
+        [SerializeField]
+        private bool clockwiseOrder = false;
 
         private float firstPlaneZ = 0;
         private float lastPlaneZ = 1000;
-        
-        private bool isInited;
+
         private float sumLength;
         private float offset;
 
-        private List<GameObject> contentObjects; 
         private float firstObjectShift;
 
-        void Start()
-        {
-            Sort();
-        }
-
-        public Coroutine Sort(float? newRadius = null)
+        public override void Sort()
         {
             Init();
-            if (newRadius.HasValue)
-            {
-                this.frontRadius = newRadius.Value;
-            }
-            offset = this.frontRadius * Mathf.PI / 2;
-            sumLength = offset*contentObjects.Count;
+            offset = radius * Mathf.PI / 2;
+            sumLength = offset * contentObjects.Count;
             lastPlaneZ = offset * ((contentObjects.Count - 2) / 2 - 1);
             if (lastPlaneZ < 0)
                 lastPlaneZ = 50;
             firstObjectShift = 0;
-
             for (int i = 0; i < contentObjects.Count; i++)
             {
-                contentObjects[i].transform.localPosition = new Vector3(frontRadius, 0, 0);
+                contentObjects[i].transform.localPosition = new Vector3(radius, 0, 0);
             }
             sortByFirst();
-
-            return null;
         }
 
-     
 
-        public void MoveAbsolute(Vector3 absolute)
-        {
-            Vector3 a = transform.InverseTransformPoint(absolute);
-            Vector3 b = transform.InverseTransformPoint(Vector3.zero);
-            MoveRelative(a - b);
-        }
-
-        public void MoveRelative(Vector3 relative)
+        public override void MoveRelative(Vector3 relative)
         {
             Move(relative.x);
         }
@@ -87,35 +68,25 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
             }
         }
 
-        public int GetClosestToCenterIndex(Vector3 centerOffset)
+        public override int GetClosestToCenterIndex(Vector3 centerOffset)
         {
             Vector3 relativeOffset = transform.InverseTransformPoint(centerOffset);
             return getClosestToCenterIndex(relativeOffset.x);
         }
 
-        public float GetDistanceToIndex(int centerIndex)
+        public override Vector3 GetDistanceForCenteringIndex(int centerIndex)
         {
-            float objectShift = firstObjectShift + offset*centerIndex;
+            int orderCoef = (clockwiseOrder ? 1 : -1);
+            float objectShift = firstObjectShift + orderCoef * offset * centerIndex;
 
             float delta1 = offset - objectShift;
-            float delta2 = sumLength - objectShift + offset;
+            float delta2 = orderCoef * sumLength - objectShift + offset;
             float shortestDelta = delta1;
             if (Math.Abs(delta1) > Math.Abs(delta2))
             {
                 shortestDelta = delta2;
             }
-            return shortestDelta;
-        }
-
-        public GameObject GetObjectByIndex(int index)
-        {
-            if (index == -1) return null;
-            return contentObjects[index];
-        }
-
-        public int GetIndexByObject(GameObject target)
-        {
-            return contentObjects.FindIndex(x => x == target);
+            return new Vector3(shortestDelta, 0);
         }
 
         private void sortByFirst()
@@ -123,7 +94,7 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
             for (int i = 1; i < contentObjects.Count; i++)
             {
                 contentObjects[i].transform.localPosition = contentObjects[i - 1].transform.localPosition;
-                moveObject(contentObjects[i], offset);
+                moveObject(contentObjects[i], (clockwiseOrder ? 1 : -1) * offset);
             }
         }
 
@@ -133,23 +104,12 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
             float centerShift = offset - firstObjectShift;
             if (centerShift < 0)
             {
-                centerShift += (Mathf.Floor(-centerShift/sumLength) + 1)*sumLength;
+                centerShift += (Mathf.Floor(-centerShift / sumLength) + 1) * sumLength;
             }
 
-            int number = Mathf.RoundToInt(centerShift/offset);
+            int number = Mathf.RoundToInt(centerShift / offset);
             number %= contentObjects.Count;
-            return number;
-        }
-
-        private void Init()
-        {
-            if (isInited) return;
-            isInited = true;
-            contentObjects = new List<GameObject>();
-            foreach (Transform content in transform)
-            {
-                contentObjects.Add(content.gameObject);
-            }
+            return (clockwiseOrder ? number : (contentObjects.Count - number) % contentObjects.Count);
         }
 
         private void moveObject(GameObject movingObject, float delta)
@@ -185,7 +145,7 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
                         }
                         prevStep = 2;
                         delta = -moveStraight(movingObject, -delta);
-                        
+
                     }
                 }
                 else
@@ -216,15 +176,15 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
 
         private float moveCircle(GameObject movingObject, float delta, bool firstPlane)
         {
-            float circleCoef = frontRadius*(!firstPlane && contentObjects.Count%2 != 0 ? 1.5f : 1);
+            float circleCoef = radius * (!firstPlane && contentObjects.Count % 2 != 0 ? 1.5f : 1);
             float deltaAngel = delta / circleCoef;
 
-            float cos = movingObject.transform.localPosition.x / frontRadius;
+            float cos = movingObject.transform.localPosition.x / radius;
             float currentAngel = Mathf.Acos(Mathf.Clamp(cos, -1, 1));
-          
+
             if (!firstPlane)
             {
-                currentAngel = - currentAngel;
+                currentAngel = -currentAngel;
             }
 
             float destAngel = currentAngel + deltaAngel;
@@ -236,12 +196,12 @@ namespace Assets.Scripts.Scenes.MainScene.Subscenes.SelectSkinPanel
             {
                 destAngel = Mathf.Clamp(destAngel, -Mathf.PI, 0);
             }
-           
+
             movingObject.transform.localPosition = new Vector3(
-                Mathf.Clamp(frontRadius * Mathf.Cos(destAngel), -frontRadius, frontRadius),
+                Mathf.Clamp(radius * Mathf.Cos(destAngel), -radius, radius),
                 movingObject.transform.localPosition.y,
-                (firstPlane ? firstPlaneZ : lastPlaneZ) 
-                    - frontRadius * Mathf.Sin(destAngel));
+                (firstPlane ? firstPlaneZ : lastPlaneZ)
+                    - radius * Mathf.Sin(destAngel));
 
             return (deltaAngel - (destAngel - currentAngel)) * circleCoef;
         }
