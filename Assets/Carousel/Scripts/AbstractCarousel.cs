@@ -34,9 +34,9 @@ namespace Carousel
                 Sort();
         }
 
-        protected virtual void Init()
+        public virtual void Init(bool forse = false)
         {
-            if (isInited) return;
+			if (isInited && !forse) return;
             isInited = true;
             contentObjects = new List<GameObject>();
             foreach (Transform content in transform)

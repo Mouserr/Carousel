@@ -20,14 +20,15 @@ namespace Carousel
 
         private float firstObjectShift;
 
+		[ContextMenu("Sort")]
         public override void Sort()
         {
             Init();
             offset = radius * Mathf.PI / 2;
             sumLength = offset * contentObjects.Count;
             lastPlaneZ = offset * ((contentObjects.Count - 2) / 2 - 1);
-            if (lastPlaneZ < 0)
-                lastPlaneZ = 50;
+            if (lastPlaneZ <= 0)
+                lastPlaneZ = 0.001f;
             firstObjectShift = 0;
             for (int i = 0; i < contentObjects.Count; i++)
             {
